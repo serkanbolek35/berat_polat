@@ -1,0 +1,11 @@
+{
+  "indexes": [
+    { "collectionGroup": "vehicles", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "listedAt", "order": "DESCENDING" } ] },
+    { "collectionGroup": "vehicles", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "soldAt", "order": "DESCENDING" } ] },
+    { "collectionGroup": "vehicles", "queryScope": "COLLECTION", "fields": [
+      { "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "featured", "order": "ASCENDING" }, { "fieldPath": "listedAt", "order": "DESCENDING" } ] }
+  ],
+  "fieldOverrides": []
+}

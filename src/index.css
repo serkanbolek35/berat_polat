@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #0b0b0c;
+  --color-graphite: #1c1c1e;
+  --color-paper: #f4f4f2;
+  --color-accent: #ff6a13;
+  --color-accent-deep: #c2410c;
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+body { font-family: var(--font-sans); color: var(--color-ink); background: #fff; }
+h1, h2, h3 { font-family: var(--font-display); }
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 44px; padding: 0 1.4rem; border-radius: 999px; font-weight: 600; font-size: .875rem; border: 1px solid transparent; transition: background .15s, color .15s, border-color .15s; cursor: pointer; }
+.btn-accent { background: var(--color-accent); color: var(--color-ink); }
+.btn-accent:hover { background: #ff8541; }
+.btn-outline-dark { border-color: var(--color-ink); color: var(--color-ink); }
+.btn-outline-dark:hover { background: var(--color-ink); color: #fff; }
+.btn-outline-light { border-color: #4a4a4d; color: #fff; }
+.btn-outline-light:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.input { width: 100%; min-height: 48px; border-radius: 12px; border: 1px solid #d4d4d1; padding: 0 14px; font-size: .9rem; background: #fff; }
+.input-dark { background: #1c1c1e; border-color: #3a3a3d; color: #e5e5e5; }

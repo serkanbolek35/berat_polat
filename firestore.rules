@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Yönetici yetkisi yalnızca sunucu tarafında atanan custom claim ile verilir (scripts/set-admin.mjs)
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
+    // Araçlar: ziyaretçiler yalnızca yayındaki ve satılmış araçları okuyabilir
+    match /vehicles/{id} {
+      allow read: if resource.data.status in ['published', 'sold'] || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Marka / model / kategori / donanım veritabanı: herkes okur, yalnızca yönetici yazar
+    match /vehicleCategories/{id}   { allow read: if true; allow write: if isAdmin(); }
+    match /vehicleBrands/{id}       { allow read: if true; allow write: if isAdmin(); }
+    match /vehicleModels/{id}       { allow read: if true; allow write: if isAdmin(); }
+    match /vehicleGenerations/{id}  { allow read: if true; allow write: if isAdmin(); }
+    match /vehiclePackages/{id}     { allow read: if true; allow write: if isAdmin(); }
+    match /vehicleEquipment/{id}    { allow read: if true; allow write: if isAdmin(); }
+
+    // Site ayarları: herkese açık okuma, yönetici yazar
+    match /siteSettings/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // İletişim mesajları: ziyaretçi yalnızca oluşturabilir (doğrulanmış), okuma/silme yönetici
+    match /messages/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['name', 'phone', 'email', 'message', 'vehicleId', 'createdAt', 'read'])
+        && request.resource.data.name is string && request.resource.data.name.size() > 1 && request.resource.data.name.size() <= 100
+        && request.resource.data.message is string && request.resource.data.message.size() > 4 && request.resource.data.message.size() <= 2000
+        && request.resource.data.phone is string && request.resource.data.phone.size() <= 30
+        && request.resource.data.read == false
+        && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /activityLogs/{id} { allow read, write: if isAdmin(); }
+    match /users/{id}        { allow read, write: if isAdmin(); }
+
+    match /{document=**} { allow read, write: if false; }
+  }
+}
