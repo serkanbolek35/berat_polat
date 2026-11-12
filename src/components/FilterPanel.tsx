@@ -1,4 +1,5 @@
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import Dropdown from './Dropdown'
 import { ChevronDown } from 'lucide-react'
 import type { Vehicle } from '../types'
 import type { Filters } from '../lib/filters'
@@ -21,35 +22,6 @@ function Group({ title, children, open = false }: { title: string; children: Rea
       <summary className="flex min-h-9 cursor-pointer list-none items-center justify-between font-semibold">{title}<ChevronDown size={16} className="transition-transform group-open:rotate-180" /></summary>
       <div className="pt-3">{children}</div>
     </details>
-  )
-}
-
-/** Aranabilir seçim kutusu (kimlik → ad eşlemesi). */
-function SearchSelect({ text, value, options, onChange, disabled, placeholder }: { text: string; value: string; options: { id: string; name: string }[]; onChange: (id: string) => void; disabled?: boolean; placeholder?: string }) {
-  const [open, setOpen] = useState(false); const [q, setQ] = useState('')
-  const id = useId(); const ref = useRef<HTMLDivElement>(null)
-  const current = options.find((o) => o.id === value)?.name ?? ''
-  const shown = options.filter((o) => o.name.toLocaleLowerCase('tr').includes(q.toLocaleLowerCase('tr')))
-  useEffect(() => {
-    const out = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false) }
-    document.addEventListener('mousedown', out); return () => document.removeEventListener('mousedown', out)
-  }, [])
-  const pick = (v: string) => { onChange(v); setOpen(false); setQ('') }
-  return (
-    <div ref={ref} className="relative">
-      <label htmlFor={id} className={label}>{text}</label>
-      <input id={id} className="input" role="combobox" aria-expanded={open} aria-controls={`${id}-l`} autoComplete="off" disabled={disabled}
-        placeholder={disabled ? 'Önce üst seçimi yapın' : placeholder ?? 'Tümü'} value={open ? q : current}
-        onFocus={() => setOpen(true)} onChange={(e) => { setQ(e.target.value); setOpen(true) }}
-        onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); if (e.key === 'Enter' && shown[0]) { e.preventDefault(); pick(shown[0].id) } }} />
-      {open && (
-        <ul id={`${id}-l`} role="listbox" className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-neutral-200 bg-white py-1 shadow-lg">
-          <li><button type="button" className="w-full px-3 py-2 text-left text-sm text-neutral-500 hover:bg-paper" onClick={() => pick('')}>Tümü</button></li>
-          {shown.map((o) => <li key={o.id}><button type="button" role="option" aria-selected={o.id === value} className={`w-full px-3 py-2 text-left text-sm hover:bg-paper ${o.id === value ? 'font-semibold text-accent-deep' : ''}`} onClick={() => pick(o.id)}>{o.name}</button></li>)}
-          {shown.length === 0 && <li className="px-3 py-2 text-sm text-neutral-500">Sonuç yok</li>}
-        </ul>
-      )}
-    </div>
   )
 }
 
@@ -127,11 +99,11 @@ export default function FilterPanel({ value: f, onChange, catalog: c, scoped }: 
 
       <Group title="Kategori, marka ve model" open>
         <div className="space-y-3">
-          <SearchSelect text="Kategori" value={f.kategori} options={c.categories} onChange={(id) => onChange({ kategori: id, marka: '', model: '', nesil: '', paket: '', kasa: [] })} />
-          <SearchSelect text="Marka" value={f.marka} options={brands} onChange={(id) => onChange({ marka: id, model: '', nesil: '', paket: '' })} />
-          <SearchSelect text="Model" value={f.model} options={models} disabled={!f.marka} onChange={(id) => onChange({ model: id, nesil: '', paket: '' })} />
-          <SearchSelect text="Seri / Nesil" value={f.nesil} options={gens} disabled={!f.model} placeholder={f.model && !gens.length ? 'Tanımlı nesil yok' : undefined} onChange={(id) => onChange({ nesil: id, paket: '' })} />
-          <SearchSelect text="Paket" value={f.paket} options={pkgs} disabled={!f.model} placeholder={f.model && !pkgs.length ? 'Tanımlı paket yok' : undefined} onChange={(id) => onChange({ paket: id })} />
+          <Dropdown label="Kategori" allLabel="Tüm Kategoriler" value={f.kategori} options={c.categories} onChange={(id) => onChange({ kategori: id, marka: '', model: '', nesil: '', paket: '', kasa: [] })} />
+          <Dropdown label="Marka" allLabel="Tüm Markalar" value={f.marka} options={brands} emptyHint="Bu kategoride marka yok" onChange={(id) => onChange({ marka: id, model: '', nesil: '', paket: '' })} />
+          <Dropdown label="Model" allLabel="Tüm Modeller" value={f.model} options={models} disabled={!f.marka} disabledHint="Önce marka seçin" emptyHint="Bu markada model yok" onChange={(id) => onChange({ model: id, nesil: '', paket: '' })} />
+          <Dropdown label="Nesil / Şasi" allLabel="Tüm Nesiller" value={f.nesil} options={gens} disabled={!f.model} disabledHint="Önce model seçin" emptyHint="Tanımlı nesil yok" onChange={(id) => onChange({ nesil: id, paket: '' })} />
+          <Dropdown label="Paket" allLabel="Tüm Paketler" value={f.paket} options={pkgs} disabled={!f.model} disabledHint="Önce model seçin" emptyHint="Tanımlı paket yok" onChange={(id) => onChange({ paket: id })} />
         </div>
       </Group>
       <Group title="Model yılı" open><div className="grid grid-cols-2 gap-2">{yearSel('yilMin', 'En az')}{yearSel('yilMax', 'En çok')}</div></Group>

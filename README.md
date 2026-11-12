@@ -97,3 +97,7 @@ Kaba tahmin: 60 araçlı bir galeride filtresiz ilk ziyaret yaklaşık 60 araç 
 - Form 11 adım yerine 7 adımdır (kategori/marka/model/nesil/paket tek adımda); alanların tamamı mevcuttur.
 - Kategoriye özel teknik alanlar (örn. motosikletlerde kapı sayısının gizlenmesi) henüz yok; yalnızca kasa tipi/alt kategori seçenekleri kategoriye göre değişir.
 - Eski (Aşama 4'te) girilmiş ilan varsa kimlik alanları yoktur; ilanı panelde açıp kaydetmeniz yeterli.
+
+### Seçim menüleri
+Kategori, marka, model, nesil/şasi ve paket tıklayınca açılan menülerdir (yazı alanı yok): seçenekler doğrudan listelenir, seçili olan onay işaretiyle görünür, listenin başında "Tüm Markalar / Tüm Modeller…" sıfırlama seçeneği bulunur. Seçince, dışarı tıklayınca veya Esc ile kapanır; ok tuşları ve Enter ile de kullanılır. Mobilde menü ekranın altından açılan bir panel olarak gelir.
+Üst seçim yapılmadıysa alt menü devre dışıdır ("Önce marka seçin"); üst seçim değişince uyumsuz alt seçimler temizlenir. Tüm seçenekler Firestore'daki katalogdan gelir; ana sayfadaki arama kutusu da aynı menüleri kullanır.

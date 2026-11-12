@@ -2,6 +2,8 @@ import { FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useVehicles, useSettings } from '../hooks/useVehicles'
+import { useCatalogScoped } from '../hooks/useCatalog'
+import Dropdown from '../components/Dropdown'
 import { useTitle } from '../hooks/useTitle'
 import VehicleCard from '../components/VehicleCard'
 import { Empty, ErrorBox, Skeletons } from '../components/States'
@@ -28,7 +30,8 @@ export default function Home() {
   useTitle()
   const nav = useNavigate()
   const s = useSettings()
-  const [q, setQ] = useState({ q: '', yakit: '', fiyatMax: '' })
+  const [q, setQ] = useState({ marka: '', model: '', yakit: '', fiyatMax: '' })
+  const cat = useCatalogScoped(q.marka, q.model)
   const featured = useVehicles('published', { featured: true, max: 3 })
   const latest = useVehicles('published', { max: 6 })
   const sold = useVehicles('sold', { max: 4 })
@@ -47,10 +50,9 @@ export default function Home() {
             <h1 className="text-4xl font-bold leading-[1.08] sm:text-6xl">{s.heroTitle || 'Hayalinizdeki Araca BEP CAR Güvencesiyle Ulaşın'}</h1>
             <p className="mt-5 text-lg text-neutral-300">{s.heroSubtitle || 'Kaliteli araçlar, şeffaf bilgiler ve güvenilir hizmet.'}</p>
           </motion.div>
-          <form onSubmit={search} className="mt-12 grid gap-3 rounded-3xl border border-neutral-800 bg-[#141415] p-5 md:grid-cols-[2fr_1fr_1fr_auto] md:items-end">
-            <label className="text-xs text-neutral-400">Marka veya model
-              <input className="input input-dark mt-1.5" placeholder="Örn. BMW 320i" value={q.q} onChange={(e) => setQ({ ...q, q: e.target.value })} />
-            </label>
+          <form onSubmit={search} className="mt-12 grid gap-3 rounded-3xl border border-neutral-800 bg-[#141415] p-5 md:grid-cols-[1fr_1fr_1fr_1fr_auto] md:items-end">
+            <Dropdown dark label="Marka" allLabel="Tüm Markalar" value={q.marka} options={cat.brands} onChange={(id) => setQ({ ...q, marka: id, model: '' })} />
+            <Dropdown dark label="Model" allLabel="Tüm Modeller" value={q.model} options={cat.models} disabled={!q.marka} disabledHint="Önce marka seçin" emptyHint="Bu markada model yok" onChange={(id) => setQ({ ...q, model: id })} />
             <label className="text-xs text-neutral-400">Yakıt
               <select className="input input-dark mt-1.5" value={q.yakit} onChange={(e) => setQ({ ...q, yakit: e.target.value })}>
                 <option value="">Hepsi</option>
