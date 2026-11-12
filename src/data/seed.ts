@@ -3,13 +3,13 @@ import { db } from '../lib/firebase'
 import { categories } from './options'
 import { slugify } from '../lib/format'
 
-const CAR = ['Otomobil', 'SUV', 'Elektrikli Araç']
+const CAR = ['Otomobil', 'SUV', 'Elektrikli Araçlar']
 const CARX = [...CAR, 'Arazi Araçları']
 const MOTO = ['Motosiklet']
 const TRUCK = ['Kamyon', 'Çekici', 'Kamyonet']
 const BUS = ['Otobüs', 'Midibüs', 'Minibüs']
 const TRACTOR = ['Traktör']
-const WORK = ['İş Makinesi']
+const WORK = ['İş Makineleri']
 
 // [marka, kategoriler, modeller]. Modeller başlangıç içindir; yönetim panelinden genişletilir.
 const data: [string, string[], string[]][] = [
@@ -42,11 +42,11 @@ const data: [string, string[], string[]][] = [
   ['Lexus', CAR, ['IS', 'ES', 'NX', 'RX', 'UX']],
   ['Mini', CAR, ['Cooper', 'Countryman', 'Clubman']],
   ['Alfa Romeo', CAR, ['Giulia', 'Giulietta', 'Stelvio']],
-  ['Tesla', ['Elektrikli Araç', 'Otomobil', 'SUV'], ['Model 3', 'Model S', 'Model X', 'Model Y']],
-  ['BYD', ['Elektrikli Araç', 'Otomobil', 'SUV'], ['Atto 3', 'Seal', 'Dolphin', 'Han']],
+  ['Tesla', ['Elektrikli Araçlar', 'Otomobil', 'SUV'], ['Model 3', 'Model S', 'Model X', 'Model Y']],
+  ['BYD', ['Elektrikli Araçlar', 'Otomobil', 'SUV'], ['Atto 3', 'Seal', 'Dolphin', 'Han']],
   ['MG', CAR, ['ZS', 'HS', 'MG4']],
   ['Chery', CAR, ['Tiggo 7', 'Tiggo 8', 'Omoda 5']],
-  ['TOGG', ['Elektrikli Araç', 'Otomobil', 'SUV'], ['T10X']],
+  ['TOGG', ['Elektrikli Araçlar', 'Otomobil', 'SUV'], ['T10X']],
   ['DS Automobiles', CAR, ['DS 3', 'DS 4', 'DS 7']],
   ['Isuzu', ['Pick-up', ...TRUCK], ['D-Max']],
   ['MAN', [...TRUCK, ...BUS], []], ['Scania', [...TRUCK, ...BUS], []], ['Iveco', [...TRUCK, ...BUS, 'Minibüs'], []],

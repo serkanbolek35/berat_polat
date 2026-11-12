@@ -31,7 +31,22 @@ export interface Vehicle {
   negotiable?: boolean
   exchange?: boolean
   financing?: boolean
-  damageRecord?: boolean
+  damageStatus?: string           // 'Belirtilmemiş' | 'Hasar Kaydı Yok' | ...
+  panelsVerified?: boolean        // kaporta bilgileri yönetici tarafından doğrulandı
+  paintedCount?: number           // kayıt sırasında panellerden türetilir
+  replacedCount?: number
+  cylinders?: number
+  turbo?: boolean
+  firstOwner?: boolean
+  warranty?: boolean
+  authorizedService?: boolean
+  province?: string
+  district?: string
+  categoryId?: string
+  brandId?: string
+  modelId?: string
+  generationId?: string
+  packageId?: string
   tramerAmount?: number
   equipment?: string[]
   panels?: Record<string, string>  // panel adı -> durum

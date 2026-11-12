@@ -28,7 +28,7 @@ export default function Home() {
   useTitle()
   const nav = useNavigate()
   const s = useSettings()
-  const [q, setQ] = useState({ q: '', fuel: '', max: '' })
+  const [q, setQ] = useState({ q: '', yakit: '', fiyatMax: '' })
   const featured = useVehicles('published', { featured: true, max: 3 })
   const latest = useVehicles('published', { max: 6 })
   const sold = useVehicles('sold', { max: 4 })
@@ -52,13 +52,13 @@ export default function Home() {
               <input className="input input-dark mt-1.5" placeholder="Örn. BMW 320i" value={q.q} onChange={(e) => setQ({ ...q, q: e.target.value })} />
             </label>
             <label className="text-xs text-neutral-400">Yakıt
-              <select className="input input-dark mt-1.5" value={q.fuel} onChange={(e) => setQ({ ...q, fuel: e.target.value })}>
+              <select className="input input-dark mt-1.5" value={q.yakit} onChange={(e) => setQ({ ...q, yakit: e.target.value })}>
                 <option value="">Hepsi</option>
-                {['Benzin', 'Dizel', 'LPG', 'Hibrit', 'Elektrik'].map((f) => <option key={f}>{f}</option>)}
+                {['Benzin', 'Dizel', 'LPG', 'Benzin + LPG', 'Hibrit', 'Plug-in Hibrit', 'Elektrik'].map((f) => <option key={f}>{f}</option>)}
               </select>
             </label>
             <label className="text-xs text-neutral-400">Maks. fiyat (₺)
-              <input className="input input-dark mt-1.5" inputMode="numeric" placeholder="Örn. 1500000" value={q.max} onChange={(e) => setQ({ ...q, max: e.target.value.replace(/\D/g, '') })} />
+              <input className="input input-dark mt-1.5" inputMode="numeric" placeholder="Örn. 1500000" value={q.fiyatMax} onChange={(e) => setQ({ ...q, fiyatMax: e.target.value.replace(/\D/g, '') })} />
             </label>
             <button className="btn btn-accent h-12 px-8" type="submit">Araç ara</button>
           </form>

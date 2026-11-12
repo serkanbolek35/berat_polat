@@ -70,3 +70,30 @@ Donanım sekmesinden eklenen özel donanımlar araç formunda hazır listenin ya
 
 - Detay sayfasında fotoğrafa tıklayınca tam ekran görüntüleyici açılır (yakınlaştırma, ok tuşları, Esc). Hasar/TRAMER bilgisi, kaporta tablosu, ekspertiz PDF, YouTube videosu ve konum bölümleri ilgili alanlar doluysa görünür.
 - Araç kartlarındaki **Karşılaştır** ile en fazla 3 araç seçilir (`/karsilastir`); seçim yalnızca bu cihazda saklanır.
+
+## Gelişmiş filtreleme (Aşama 5)
+
+`/satilik-araclar` ve `/satilan-araclar`: masaüstünde sol kenar çubuğu, mobilde tam ekran panel ("N aracı göster" düğmesiyle uygulanır).
+Filtreler: arama, kategori → marka → model → seri/nesil → paket (her düzeyde yalnızca üst seçime ait seçenekler), model yılı, fiyat, kilometre, yakıt, vites, kasa tipi (kategoriye göre), çekiş, motor hacmi/gücü/silindir/turbo, renk, hasar durumu, ilk sahibinden/garanti/yetkili servis/takas/kredi/öne çıkan, il/ilçe, ilan tarihi.
+Hepsi birlikte uygulanır; aktif filtreler rozet olarak görünür ve tek tek kaldırılır; sonuç sayısı canlı güncellenir; sıralama ve sayfa dahil her şey adres satırında tutulur (paylaşılabilir bağlantı, geri/ileri düğmeleri çalışır).
+Marka, model, nesil ve paket dışındaki gruplar (yakıt, renk vb.) yalnızca seçili kapsamdaki araçlarda gerçekten bulunan değerleri gösterir.
+
+### Veri modeli
+Araç belgesi hem okunabilir adları (`brand`, `model`, `generation`, `package`, `fuel`…) hem de normalleştirilmiş kimlikleri (`categoryId`, `brandId`, `modelId`, `generationId`, `packageId`) taşır. Kayıt sırasında adlar katalogla eşlenir; katalogda yoksa kayıt otomatik oluşturulur (kimlikler addan türetilir, çift kayıt oluşmaz). Yönetici formu ve genel filtreler aynı koleksiyonları kullanır.
+Alan adları örnek belgenizden biraz farklıdır (`fuel` ↔ `fuelType`, `engineCc` ↔ `engineCapacity`, `enginePowerHp` ↔ `horsepower`); anlamları aynıdır.
+Hasar: `damageStatus` (Belirtilmemiş / Hasar Kaydı Yok / Var / Ağır Hasar / Pert). "Hatasız / Boyasız / Değişensiz" yalnızca hasar durumu "Yok" **ve** kaporta bilgileri yönetici tarafından doğrulanmışsa eşleşir; `paintedCount` ve `replacedCount` kayıtta panellerden türetilir.
+
+### Sorgu mimarisi ve maliyet
+Firestore keyfi birleşik sorguları ve tam metin aramasını desteklemez. Bu yüzden iki katmanlı çalışılır:
+1. **Sunucu:** `durum` + seçili hiyerarşinin **en derin** düzeyi için tek eşitlik filtresi (paket > nesil > model > marka > kategori; kimlikler benzersiz olduğundan üst düzeyler zaten kapsanır), tarihe göre sıralı, en fazla 300 belge. Bunun için 13 bileşik indeks gerekir (`firestore.indexes.json`, `firebase deploy --only firestore:indexes` ile yüklenir; indeksler oluşana kadar sorgular hata verebilir, birkaç dakika sürer).
+2. **İstemci:** yıl/fiyat/km aralıkları, çoklu seçimler, hasar, konum, tarih ve metin araması, sunucudan gelen daralmış küme üzerinde uygulanır.
+Marka veya model seçilince yalnızca o markanın belgeleri okunur. Model/nesil/paket listeleri de yalnızca seçili üst öğe için okunur. Firestore yerel önbelleği açıktır; aynı tarayıcıda tekrar eden ziyaretlerde yalnızca değişen belgeler faturalanır.
+Kaba tahmin: 60 araçlı bir galeride filtresiz ilk ziyaret yaklaşık 60 araç + ~70 katalog okuması yapar; Spark planının günlük 50.000 okuma kotası yüzlerce ziyaretçiye yeter. Yüzlerce ilana ulaşırsanız sunucu tarafı arama (Algolia/Typesense) veya sayfalı sorgular gerekir.
+Özel işlem gerektiren durumlar: kategori + marka birlikte seçilince sunucu yalnızca markaya göre daraltır, kategori istemcide denetlenir; ilçe seçenekleri yüklü kümeden türetilir; "Hatasız" ve "Boyalı" gibi hasar seçenekleri istemcide çalışır.
+
+### Bilinen sınırlar
+- Marka listesi kategoriye göre süzülür ama araç sayıları gösterilmez; ilanı olmayan markalar da listelenir.
+- İlçe listesi serbest metinden (yöneticinin yazdığı) türetilir; yazım farkları ayrı seçenek olur.
+- Form 11 adım yerine 7 adımdır (kategori/marka/model/nesil/paket tek adımda); alanların tamamı mevcuttur.
+- Kategoriye özel teknik alanlar (örn. motosikletlerde kapı sayısının gizlenmesi) henüz yok; yalnızca kasa tipi/alt kategori seçenekleri kategoriye göre değişir.
+- Eski (Aşama 4'te) girilmiş ilan varsa kimlik alanları yoktur; ilanı panelde açıp kaydetmeniz yeterli.

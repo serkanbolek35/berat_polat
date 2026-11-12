@@ -10,7 +10,7 @@ const rows: [string, (v: Vehicle) => string | number | undefined][] = [
   ['Fiyat', (v) => (v.status === 'sold' ? 'Satıldı' : formatPrice(v))], ['Model yılı', (v) => v.year], ['Kilometre', (v) => formatKm(v.mileage)],
   ['Yakıt', (v) => v.fuel], ['Vites', (v) => v.transmission], ['Çekiş', (v) => v.driveType], ['Kasa tipi', (v) => v.bodyType], ['Renk', (v) => v.color],
   ['Motor hacmi', (v) => (v.engineCc ? `${v.engineCc} cc` : undefined)], ['Motor gücü', (v) => (v.enginePowerHp ? `${v.enginePowerHp} HP` : undefined)],
-  ['Hasar kaydı', (v) => (v.damageRecord === undefined ? undefined : v.damageRecord ? 'Var' : 'Yok')],
+  ['Hasar durumu', (v) => (v.damageStatus && v.damageStatus !== 'Belirtilmemiş' ? v.damageStatus : undefined)],
   ['TRAMER', (v) => (v.tramerAmount ? `${v.tramerAmount.toLocaleString('tr-TR')} ₺` : undefined)],
   ['Takas', (v) => (v.exchange === undefined ? undefined : v.exchange ? 'Olur' : 'Olmaz')],
 ]

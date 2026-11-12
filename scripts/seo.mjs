@@ -31,7 +31,7 @@ try {
     const desc = `${v.title} – ${v.year}, ${Number(v.mileage).toLocaleString('tr-TR')} km, ${v.fuel}${v.status === 'sold' ? ' (Satıldı)' : ''}`
     const image = v.images?.[0]?.url
     const ld = {
-      '@context': 'https://schema.org', '@type': ['Otomobil', 'SUV', 'Elektrikli Araç', 'Arazi Araçları', 'Pick-up'].includes(v.category) ? 'Car' : 'Vehicle',
+      '@context': 'https://schema.org', '@type': ['Otomobil', 'SUV', 'Elektrikli Araçlar', 'Arazi Araçları', 'Pick-up'].includes(v.category) ? 'Car' : 'Vehicle',
       name: v.title, brand: { '@type': 'Brand', name: v.brand }, model: v.model, vehicleModelDate: String(v.year),
       mileageFromOdometer: { '@type': 'QuantitativeValue', value: v.mileage, unitCode: 'KMT' }, fuelType: v.fuel, vehicleTransmission: v.transmission,
       image: (v.images || []).map((i) => i.url),

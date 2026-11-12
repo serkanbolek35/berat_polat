@@ -25,7 +25,7 @@ export default function VehicleDetail() {
   useTitle(v?.title, v ? `${v.title} – ${v.year}, ${formatKm(v.mileage)}, ${v.fuel}` : undefined, {
     image: v?.images?.[0]?.url,
     jsonLd: v ? {
-      '@context': 'https://schema.org', '@type': ['Otomobil', 'SUV', 'Elektrikli Araç', 'Arazi Araçları', 'Pick-up'].includes(v.category) ? 'Car' : 'Vehicle',
+      '@context': 'https://schema.org', '@type': ['Otomobil', 'SUV', 'Elektrikli Araçlar', 'Arazi Araçları', 'Pick-up'].includes(v.category) ? 'Car' : 'Vehicle',
       name: v.title, description: v.description || undefined, brand: { '@type': 'Brand', name: v.brand }, model: v.model, vehicleModelDate: String(v.year),
       mileageFromOdometer: { '@type': 'QuantitativeValue', value: v.mileage, unitCode: 'KMT' }, fuelType: v.fuel, vehicleTransmission: v.transmission, color: v.color || undefined,
       image: v.images.map((i) => i.url),
@@ -48,7 +48,9 @@ export default function VehicleDetail() {
     ['Marka', v.brand], ['Model', v.model], ['Paket', v.package], ['Model yılı', v.year], ['Kilometre', formatKm(v.mileage)],
     ['Yakıt', v.fuel], ['Vites', v.transmission], ['Çekiş', v.driveType], ['Kasa tipi', v.bodyType], ['Renk', v.color],
     ['Motor hacmi', v.engineCc ? `${v.engineCc} cc` : undefined], ['Motor gücü', v.enginePowerHp ? `${v.enginePowerHp} HP` : undefined],
-    ['Hasar kaydı', v.damageRecord === undefined ? undefined : v.damageRecord ? 'Var' : 'Yok'],
+    ['Hasar durumu', v.damageStatus && v.damageStatus !== 'Belirtilmemiş' ? v.damageStatus : undefined],
+    ['Silindir', v.cylinders], ['Turbo', v.turbo === undefined ? undefined : v.turbo ? 'Var' : 'Yok'],
+    ['İl / İlçe', [v.province, v.district].filter(Boolean).join(' / ') || undefined],
     ['TRAMER', v.tramerAmount ? `${v.tramerAmount.toLocaleString('tr-TR')} ₺` : undefined],
   ]
 
@@ -74,12 +76,12 @@ export default function VehicleDetail() {
           )}
           {v.description && <section className="mt-10"><h2 className="text-2xl font-semibold">Açıklama</h2><p className="mt-3 max-w-[70ch] whitespace-pre-line leading-relaxed text-neutral-700">{v.description}</p></section>}
           {!!v.equipment?.length && <section className="mt-10"><h2 className="text-2xl font-semibold">Donanım</h2><ul className="mt-3 flex flex-wrap gap-2">{v.equipment.map((e) => <li key={e} className="rounded-full bg-paper px-3 py-1.5 text-sm">{e}</li>)}</ul></section>}
-          {(v.damageRecord !== undefined || v.tramerAmount || v.expertNotes || v.panels || v.expertReportUrl) && (
+          {((v.damageStatus && v.damageStatus !== 'Belirtilmemiş') || v.tramerAmount || v.expertNotes || v.panelsVerified || v.expertReportUrl) && (
             <section className="mt-10"><h2 className="text-2xl font-semibold">Hasar ve ekspertiz bilgisi</h2>
-              <p className="mt-3 text-neutral-700">{v.damageRecord === undefined ? '' : v.damageRecord ? 'Bu araçta hasar kaydı bulunuyor.' : 'Bu araçta hasar kaydı bulunmuyor.'}{v.tramerAmount ? ` TRAMER toplam tutarı: ${v.tramerAmount.toLocaleString('tr-TR')} ₺.` : ''}</p>
+              <p className="mt-3 text-neutral-700">{v.damageStatus && v.damageStatus !== 'Belirtilmemiş' ? `Hasar durumu: ${v.damageStatus}.` : ''}{v.tramerAmount ? ` TRAMER toplam tutarı: ${v.tramerAmount.toLocaleString('tr-TR')} ₺.` : ''}</p>
               {v.expertNotes && <p className="mt-3 max-w-[70ch] whitespace-pre-line leading-relaxed text-neutral-700">{v.expertNotes}</p>}
               {v.expertReportUrl && <a className="btn btn-outline-dark mt-4" href={v.expertReportUrl} target="_blank" rel="noreferrer">Ekspertiz raporunu aç (PDF)</a>}
-              {v.panels && Object.keys(v.panels).length > 0 && (
+              {v.panelsVerified && v.panels && Object.keys(v.panels).length > 0 && (
                 <div className="mt-6"><h3 className="mb-2 text-lg font-semibold">Kaporta durumu</h3>
                   <table className="w-full max-w-xl text-sm"><tbody>{panelNames.map((p) => { const st = v.panels?.[p] ?? 'Orijinal'; return (
                     <tr key={p} className="border-b border-neutral-100"><th scope="row" className="py-2 text-left font-normal text-neutral-600">{p}</th>

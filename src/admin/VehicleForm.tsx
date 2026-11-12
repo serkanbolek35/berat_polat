@@ -5,8 +5,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { deleteField, doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
-import { newVehicleId, saveVehicle, uploadPdf } from '../lib/vehicleOps'
-import { bodyTypes, categories, driveTypes, equipmentGroups, fuels, panelNames, panelStates, transmissions } from '../data/options'
+import { newVehicleId, resolveCatalog, saveVehicle, uploadPdf } from '../lib/vehicleOps'
+import { bodyOptionsFor, categories, colors, damageStatuses, driveTypes, equipmentGroups, fuels, panelNames, panelStates, transmissions } from '../data/options'
+import { provinces } from '../data/provinces'
 import type { Vehicle, VehicleImage } from '../types'
 import PhotoManager from './PhotoManager'
 import { useCatalog } from '../hooks/useCatalog'
@@ -20,10 +21,12 @@ const schema = z.object({
   generation: z.string().optional(), package: z.string().optional(), stockNo: z.string().optional(),
   year: z.number({ invalid_type_error: 'Model yılını girin.' }).int().min(1950, 'Yıl geçersiz.').max(new Date().getFullYear() + 1, 'Yıl geçersiz.'),
   bodyType: z.string().optional(), color: z.string().optional(),
+  cylinders: optNum, turbo: z.boolean(), firstOwner: z.boolean(), warranty: z.boolean(), authorizedService: z.boolean(),
+  province: z.string().optional(), district: z.string().optional(),
   fuel: z.string().min(1, 'Yakıt türünü seçin.'), engineCc: optNum, enginePowerHp: optNum,
   transmission: z.string().min(1, 'Vites türünü seçin.'), driveType: z.string().optional(),
   mileage: z.number({ invalid_type_error: 'Kilometreyi girin.' }).min(0, 'Kilometre geçersiz.'),
-  damageRecord: z.boolean(), tramerAmount: optNum, expertNotes: z.string().optional(),
+  damageStatus: z.string().optional(), panelsVerified: z.boolean(), tramerAmount: optNum, expertNotes: z.string().optional(),
   panels: z.record(z.string()), equipment: z.array(z.string()),
   title: z.string().trim().min(3, 'İlan başlığı yazın.'), description: z.string().optional(),
   price: z.number({ invalid_type_error: 'Fiyatı girin.' }).positive('Fiyatı girin.'),
@@ -44,7 +47,7 @@ const steps: { name: string; fields: FieldPath<FormValues>[] }[] = [
 ]
 const empty: FormValues = {
   category: 'Otomobil', brand: '', model: '', year: new Date().getFullYear(), fuel: '', transmission: '', mileage: 0,
-  damageRecord: false, panels: {}, equipment: [], title: '', price: 0, currency: 'TRY',
+  damageStatus: 'Belirtilmemiş', panelsVerified: false, turbo: false, firstOwner: false, warranty: false, authorizedService: false, panels: {}, equipment: [], title: '', price: 0, currency: 'TRY',
   negotiable: false, exchange: false, financing: false, featured: false,
 }
 function CatalogSelect({ label, value, options, onChange, error }: { label: string; value: string; options: string[]; onChange: (v: string) => void; error?: string }) {
@@ -116,7 +119,17 @@ export default function VehicleForm() {
   const persist = async (values: FormValues, status: Vehicle['status']) => {
     setBusy(true); setMsg(null)
     try {
-      const data: Record<string, unknown> = { ...values, videoUrl: values.videoUrl || deleteField(), images, status, expertReportUrl: pdf ?? deleteField() }
+      const ids = await resolveCatalog(values, cat)
+      const verified = values.panelsVerified
+      const panels = verified ? Object.fromEntries(panelNames.map((p) => [p, values.panels?.[p] ?? 'Orijinal'])) : {}
+      const count = (...st: string[]) => Object.values(panels).filter((x) => st.includes(x)).length
+      const data: Record<string, unknown> = {
+        ...values, panels, paintedCount: count('Boyalı', 'Lokal Boyalı'), replacedCount: count('Değişen'),
+        brand: ids.brandName ?? values.brand, model: ids.modelName ?? values.model, generation: ids.generationName ?? deleteField(), package: ids.packageName ?? deleteField(),
+        categoryId: ids.categoryId ?? deleteField(), brandId: ids.brandId ?? deleteField(), modelId: ids.modelId ?? deleteField(),
+        generationId: ids.generationId ?? deleteField(), packageId: ids.packageId ?? deleteField(),
+        videoUrl: values.videoUrl || deleteField(), images, status, expertReportUrl: pdf ?? deleteField(),
+      }
       if (status === 'published' && !existing?.listedAt) data.listedAt = serverTimestamp()
       await saveVehicle(vid, data, !savedRef.current)
       savedRef.current = true
@@ -145,10 +158,10 @@ export default function VehicleForm() {
   const F = ({ label, name, err, children }: { label: string; name?: string; err?: string; children: React.ReactNode }) => (
     <label className="block text-sm font-medium">{label}{children}{err && <span role="alert" className="mt-1 block text-sm text-red-700">{err}</span>}{name && null}</label>
   )
-  const Check = ({ name, label }: { name: 'damageRecord' | 'negotiable' | 'exchange' | 'financing' | 'featured'; label: string }) => (
+  const Check = ({ name, label }: { name: 'panelsVerified' | 'turbo' | 'firstOwner' | 'warranty' | 'authorizedService' | 'negotiable' | 'exchange' | 'financing' | 'featured'; label: string }) => (
     <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-[#ff6a13]" {...register(name)} />{label}</label>
   )
-  const Select = ({ name, list, placeholder }: { name: 'category' | 'fuel' | 'transmission' | 'driveType' | 'bodyType'; list: string[]; placeholder?: string }) => (
+  const Select = ({ name, list, placeholder }: { name: 'category' | 'fuel' | 'transmission' | 'driveType' | 'bodyType' | 'color' | 'damageStatus' | 'province'; list: string[]; placeholder?: string }) => (
     <select className="input mt-1.5" {...register(name)}><option value="">{placeholder ?? 'Seçin'}</option>{list.map((x) => <option key={x}>{x}</option>)}</select>
   )
 
@@ -170,8 +183,8 @@ export default function VehicleForm() {
           <CatalogSelect label="Nesil" value={w.generation ?? ''} options={genOpts} onChange={(v) => pick('generation', v, ['package'])} />
           <CatalogSelect label="Paket" value={w.package ?? ''} options={pkgOpts} onChange={(v) => pick('package', v)} />
           <F label="Model yılı" err={errors.year?.message}><input className="input mt-1.5" inputMode="numeric" {...register('year', { valueAsNumber: true })} /></F>
-          <F label="Kasa tipi"><Select name="bodyType" list={bodyTypes} /></F>
-          <F label="Renk"><input className="input mt-1.5" {...register('color')} /></F>
+          <F label="Kasa tipi / alt kategori"><Select name="bodyType" list={bodyOptionsFor(w.category)} /></F>
+          <F label="Renk"><Select name="color" list={colors} /></F>
         </div>}
 
         {step === 1 && <div className="grid gap-4 sm:grid-cols-2">
@@ -181,17 +194,21 @@ export default function VehicleForm() {
           <F label="Kilometre" err={errors.mileage?.message}><input className="input mt-1.5" inputMode="numeric" {...register('mileage', { valueAsNumber: true })} /></F>
           <F label="Motor hacmi (cc)"><input className="input mt-1.5" inputMode="numeric" {...register('engineCc', opt)} /></F>
           <F label="Motor gücü (HP)"><input className="input mt-1.5" inputMode="numeric" {...register('enginePowerHp', opt)} /></F>
+          <F label="Silindir sayısı"><input className="input mt-1.5" inputMode="numeric" {...register('cylinders', opt)} /></F>
+          <div className="flex items-end"><Check name="turbo" label="Turbo" /></div>
         </div>}
 
         {step === 2 && <div className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Check name="damageRecord" label="Hasar kaydı var" />
+            <F label="Hasar durumu"><Select name="damageStatus" list={damageStatuses} /></F>
             <F label="TRAMER toplam tutarı (₺)" err={errors.tramerAmount?.message}><input className="input mt-1.5" inputMode="numeric" {...register('tramerAmount', opt)} /></F>
           </div>
+          <div className="flex flex-wrap gap-x-6"><Check name="firstOwner" label="İlk sahibinden" /><Check name="warranty" label="Garantili" /><Check name="authorizedService" label="Yetkili servis bakımlı" /></div>
           <fieldset><legend className="mb-2 text-sm font-medium">Kaporta durumu</legend>
+            <Check name="panelsVerified" label="Kaporta bilgilerini kontrol ettim ve doğruluyorum (işaretlenmezse sitede gösterilmez ve araç “hatasız” sayılmaz)" />
             <div className="grid gap-2 sm:grid-cols-2">{panelNames.map((p) => (
               <label key={p} className="flex items-center justify-between gap-3 rounded-xl bg-paper px-3 py-2 text-sm">{p}
-                <select className="rounded-lg border border-neutral-300 bg-white px-2 py-1.5" value={w.panels?.[p] ?? 'Orijinal'} onChange={(e) => setValue('panels', { ...getValues('panels'), [p]: e.target.value }, { shouldDirty: true })}>
+                <select disabled={!w.panelsVerified} className="rounded-lg border border-neutral-300 bg-white px-2 py-1.5 disabled:opacity-50" value={w.panels?.[p] ?? 'Orijinal'} onChange={(e) => setValue('panels', { ...getValues('panels'), [p]: e.target.value }, { shouldDirty: true })}>
                   {panelStates.map((s) => <option key={s}>{s}</option>)}</select></label>))}</div></fieldset>
           <F label="Ekspertiz ve hasar notları"><textarea className="input mt-1.5 min-h-24 py-3" {...register('expertNotes')} /></F>
           <div className="text-sm"><span className="font-medium">Ekspertiz raporu (PDF)</span>
@@ -213,6 +230,8 @@ export default function VehicleForm() {
           <div className="sm:col-span-2"><F label="İlan başlığı" err={errors.title?.message}><input className="input mt-1.5" {...register('title')} onFocus={() => { if (!getValues('title')) setValue('title', [getValues('brand'), getValues('model'), getValues('package')].filter(Boolean).join(' ')) }} /></F></div>
           <F label="Fiyat" err={errors.price?.message}><input className="input mt-1.5" inputMode="numeric" {...register('price', { valueAsNumber: true })} /></F>
           <F label="Para birimi"><select className="input mt-1.5" {...register('currency')}><option value="TRY">₺ TL</option><option value="EUR">€ Euro</option><option value="USD">$ Dolar</option></select></F>
+          <F label="İl"><Select name="province" list={provinces} /></F>
+          <F label="İlçe"><input className="input mt-1.5" {...register('district')} /></F>
           <div className="flex flex-wrap gap-x-6 sm:col-span-2"><Check name="negotiable" label="Pazarlık payı var" /><Check name="exchange" label="Takas olur" /><Check name="financing" label="Kredi uygun" /><Check name="featured" label="Öne çıkar" /></div>
           <div className="sm:col-span-2"><F label="Açıklama"><textarea className="input mt-1.5 min-h-36 py-3" {...register('description')} /></F></div>
           <div className="sm:col-span-2"><F label="YouTube video bağlantısı" err={errors.videoUrl?.message}><input className="input mt-1.5" {...register('videoUrl')} placeholder="https://www.youtube.com/watch?v=…" /></F></div>

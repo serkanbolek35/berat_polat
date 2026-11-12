@@ -1,7 +1,9 @@
-import { collection, deleteDoc, deleteField, doc, runTransaction, serverTimestamp, setDoc, Timestamp, updateDoc } from 'firebase/firestore'
+import { arrayUnion, collection, deleteDoc, deleteField, doc, runTransaction, serverTimestamp, setDoc, Timestamp, updateDoc, writeBatch } from 'firebase/firestore'
 import { deleteObject, getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage'
 import { db, storage } from './firebase'
 import type { Vehicle, VehicleImage, VehicleStatus } from '../types'
+import type { Brand, Category, Generation, Model, Pkg } from '../hooks/useCatalog'
+import { slugify } from './format'
 
 export const newVehicleId = () => doc(collection(db, 'vehicles')).id
 
@@ -85,3 +87,41 @@ export async function uploadPdf(vehicleId: string, file: File) {
 }
 
 export const deleteFile = (path: string) => deleteObject(ref(storage, path)).catch(() => {})
+
+interface CatalogData { categories: Category[]; brands: Brand[]; models: Model[]; generations: Generation[]; packages: Pkg[] }
+export interface ResolvedCatalog { categoryId?: string; brandId?: string; brandName?: string; modelId?: string; modelName?: string; generationId?: string; generationName?: string; packageId?: string; packageName?: string }
+
+/**
+ * Formda yazılan/seçilen adları katalogdaki kayıtlarla eşler; katalogda yoksa kaydı oluşturur.
+ * Böylece yönetici ve ziyaretçi filtreleri her zaman aynı veri kümesini kullanır (tutarsız ikinci bir liste oluşmaz).
+ * Kimlikler adlardan türetildiği için aynı ad iki kez oluşturulmaz.
+ */
+export async function resolveCatalog(v: { category?: string; brand?: string; model?: string; generation?: string; package?: string }, c: CatalogData): Promise<ResolvedCatalog> {
+  const eq = (a: string, b: string) => a.trim().toLocaleLowerCase('tr') === b.trim().toLocaleLowerCase('tr')
+  const out: ResolvedCatalog = {}; const b = writeBatch(db); let dirty = false
+  const category = v.category?.trim(); const brand = v.brand?.trim(); const model = v.model?.trim(); const gen = v.generation?.trim(); const pkg = v.package?.trim()
+
+  if (category) {
+    const hit = c.categories.find((x) => eq(x.name, category)); out.categoryId = hit?.id ?? slugify(category)
+    if (!hit) { b.set(doc(db, 'vehicleCategories', out.categoryId), { name: category }, { merge: true }); dirty = true }
+  }
+  if (brand) {
+    const hit = c.brands.find((x) => eq(x.name, brand)); out.brandId = hit?.id ?? slugify(brand); out.brandName = hit?.name ?? brand
+    if (!hit) { b.set(doc(db, 'vehicleBrands', out.brandId), { name: brand, categories: category ? [category] : [] }, { merge: true }); dirty = true }
+    else if (category && hit.categories?.length && !hit.categories.includes(category)) { b.update(doc(db, 'vehicleBrands', hit.id), { categories: arrayUnion(category) }); dirty = true }
+  }
+  if (out.brandId && model) {
+    const hit = c.models.find((x) => x.brandId === out.brandId && eq(x.name, model)); out.modelId = hit?.id ?? `${out.brandId}__${slugify(model)}`; out.modelName = hit?.name ?? model
+    if (!hit) { b.set(doc(db, 'vehicleModels', out.modelId), { name: model, brandId: out.brandId }, { merge: true }); dirty = true }
+  }
+  if (out.modelId && gen) {
+    const hit = c.generations.find((x) => x.modelId === out.modelId && eq(x.name, gen)); out.generationId = hit?.id ?? `${out.modelId}__${slugify(gen)}`; out.generationName = hit?.name ?? gen
+    if (!hit) { b.set(doc(db, 'vehicleGenerations', out.generationId), { name: gen, modelId: out.modelId }, { merge: true }); dirty = true }
+  }
+  if (out.modelId && pkg) {
+    const hit = c.packages.find((x) => x.modelId === out.modelId && eq(x.name, pkg)); out.packageId = hit?.id ?? `${out.modelId}__${slugify(pkg)}`; out.packageName = hit?.name ?? pkg
+    if (!hit) { b.set(doc(db, 'vehiclePackages', out.packageId), { name: pkg, modelId: out.modelId, generationId: out.generationId ?? null }, { merge: true }); dirty = true }
+  }
+  if (dirty) await b.commit()
+  return out
+}
